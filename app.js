@@ -35,7 +35,7 @@ function isAuthenticated(req, res, next) {
 }
 
 /** Kobler til SQLite-database */
-const db = new sqlite3.Database("minNyeDatabase.db", (err) => {
+const db = new sqlite3.Database("kaare.db", (err) => {
     if (err) {
         console.error("Feil ved tilkobling til database:", err.message);
     } else {
@@ -48,6 +48,17 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "view", "index.html"));
 });
 
+app.get("/kurs1", isAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, "view", "kurs1.html"));
+});
+
+app.get("/kurs2", isAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, "view", "kurs2.html"));
+});
+
+app.get("/kurs3", isAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, "view", "kurs3.html"));
+});
 /** Rute: Viser innloggingssiden */
 app.get("/login", (req, res) => {
     res.sendFile(path.join(__dirname, "view", "login.html"));
@@ -59,8 +70,8 @@ app.get("/ny-bruker", (req, res) => {
 });
 
 /** Rute: Viser privat side (kun for autentiserte brukere) */
-app.get("/privat", isAuthenticated, (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "privat.html"));
+app.get("/kursoversikt", isAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, "view", "kursoversikt.html"));
 });
 
 /** Rute: Logger ut brukeren og avslutter sesjonen */
@@ -91,7 +102,7 @@ app.post("/login", (req, res) => {
                 navn: row.Navn,
                 epost: row.Epost
             };
-            res.redirect("/");
+            res.redirect("/kursoversikt");
         } else {
             res.redirect("/login?error=Ugyldig epost eller passord");
         }
@@ -118,6 +129,25 @@ app.post("/ny-bruker", async (req, res) => {
         res.redirect("/?melding=Bruker opprettet");
     });
 });
+
+
+app.post("/meldpaa", async (req, res) => {
+    const { kurs } = req.body;
+    if (!kurs) {
+        return res.redirect("/login?error=Mangler data fra skjema");
+    }
+    const sql = "INSERT INTO Bruker (Navn, Epost, Passord) VALUES (?, ?, ?)";
+    const hashedPassword = await bcrypt.hash(passord, 10);
+    db.run(sql, [navn, epost, hashedPassword], function (err) {
+        if (err) {
+            console.error("Databasefeil:", err.message);
+            return res.redirect("/login?error=En uventet feil har oppstått");
+        }
+        req.session.user = { id: this.lastID, navn, epost };
+        res.redirect("/?melding=Bruker opprettet");
+    });
+});
+
 
 /** Starter serveren */
 server.listen(port, () => {
