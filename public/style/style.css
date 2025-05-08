@@ -1,6 +1,8 @@
 /* CSS Reset */
 html {
     box-sizing: border-box;
+    background-color: #121212; /* Dark background for the entire page */
+    color: #e0e0e0; /* Light text color */
 }
 *,
 *:before,
@@ -10,20 +12,96 @@ html {
     box-sizing: inherit;
 }
 
+
+
 body {
     display: grid;
     grid-template-rows: 120px auto 120px;
     min-height: 100vh;
+    background-color: #1e1e1e; /* Dark background for the body */
+    color: #e0e0e0; /* Light text color */
 }
 
 header {
-    background-color: #eaeaea;
+    background-color: #272727; /* Darker header background */
+    color: #e0e0e0; /* Light text color */
+    padding: 10px;
 }
 
 main {
-    background-color: #fafafa;
+    background-color: #1e1e1e; /* Darker main background */
+    color: #e0e0e0; /* Light text color */
 }
 
 footer {
-    background-color: #eaeaea;
+    background-color: #272727; /* Darker footer background */
+    color: #e0e0e0; /* Light text color */
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+}
+
+a, button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #333; /* Dark button background */
+    color: #e0e0e0; /* Light text color */
+    text-decoration: none; /* Remove underline for links */
+    border: 1px solid #444; /* Subtle border for buttons and links */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 16px;
+    text-align: center;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a:hover, button:hover {
+    background-color: #555; /* Slightly lighter background on hover */
+    color: #ffffff; /* Brighter text color on hover */
+}
+
+form div {
+    margin-bottom: 15px; /* Add spacing between form fields */
+}
+
+label {
+    display: block; /* Make labels appear above inputs */
+    margin-bottom: 5px; /* Add spacing between label and input */
+    font-weight: bold; /* Make labels stand out */
+    font-size: 14px;
+    color: #e0e0e0; /* Light text color */
+}
+
+input {
+    width: 25%; /* Make inputs take full width of the container */
+    padding: 10px; /* Add padding for better usability */
+    font-size: 14px; /* Set font size */
+    border: 1px solid #444; /* Darker border */
+    border-radius: 5px; /* Rounded corners */
+    box-sizing: border-box; /* Include padding in width/height */
+    background-color: #1e1e1e; /* Dark input background */
+    color: #e0e0e0; /* Light text color */
+}
+
+input:focus {
+    border-color: #007BFF; /* Highlight border on focus */
+    outline: none; /* Remove default outline */
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Add subtle glow */
+}
+
+p {
+    padding-left: 10px;
+}
+
+h1 {
+    padding-left: 10px;
+}
+h4 {
+    margin-top: 25px;
+}
+
+main {
+    margin-left: 50px;
+    margin-top: 25px;
 }

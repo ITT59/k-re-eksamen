@@ -18,67 +18,115 @@ app.use(express.urlencoded({ extended: true }));
 
 /** Konfigurerer sesjonshåndtering */
 app.use(
-    session({
-        secret: "hemmeligNøkkel",
-        resave: false,
-        saveUninitialized: true,
-        cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 },
-    })
+  session({
+    secret: "hemmeligNøkkel",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 },
+  })
 );
 
 function isAuthenticated(req, res, next) {
-    if (req.session.user) {
-        next();
-    } else {
-        res.redirect("/login");
-    }
+  if (req.session.user) {
+    next();
+  } else {
+    res.redirect("/login");
+  }
 }
 
 /** Kobler til SQLite-database */
 const db = new sqlite3.Database("kaare.db", (err) => {
-    if (err) {
-        console.error("Feil ved tilkobling til database:", err.message);
-    } else {
-        console.log("Koblet til SQLite-database.");
-    }
+  if (err) {
+    console.error("Feil ved tilkobling til database:", err.message);
+  } else {
+    console.log("Koblet til SQLite-database.");
+  }
 });
 
 /** Rute: Viser forsiden (kun for autentiserte brukere) */
 app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "index.html"));
+  res.sendFile(path.join(__dirname, "view", "index.html"));
 });
 
 app.get("/kurs1", isAuthenticated, (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "kurs1.html"));
+  res.sendFile(path.join(__dirname, "view", "kurs1.html"));
 });
 
 app.get("/kurs2", isAuthenticated, (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "kurs2.html"));
+  res.sendFile(path.join(__dirname, "view", "kurs2.html"));
 });
 
-app.get("/kurs3", isAuthenticated, (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "kurs3.html"));
+app.get("/kurs3", isAuthenticated,  (req, res) => {
+  res.sendFile(path.join(__dirname, "view", "kurs3.html"));
 });
 /** Rute: Viser innloggingssiden */
 app.get("/login", (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "login.html"));
+  res.sendFile(path.join(__dirname, "view", "login.html"));
 });
 
 /** Rute: Viser siden for å opprette ny bruker */
 app.get("/ny-bruker", (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "ny-bruker.html"));
+  res.sendFile(path.join(__dirname, "view", "ny-bruker.html"));
 });
 
 /** Rute: Viser privat side (kun for autentiserte brukere) */
 app.get("/kursoversikt", isAuthenticated, (req, res) => {
-    res.sendFile(path.join(__dirname, "view", "kursoversikt.html"));
+  res.sendFile(path.join(__dirname, "view", "kursoversikt.html"));
+});
+
+app.get("/admin", (req, res) => {
+  if (req.session.user) {
+    const user = req.session.user;
+    if (user.id === 1) {
+      res.sendFile(path.join(__dirname, "view", "admin.html"));
+    } else {
+      res.sendFile(path.join(__dirname, "view", "kursoversikt.html"));
+    }
+  } else {
+    res.sendFile(path.join(__dirname, "view", "login.html"));
+  }
+});
+
+
+/** Rute: Sletter den innloggede brukeren */
+app.delete("/api/slett-bruker", isAuthenticated, (req, res) => {
+    const userId = req.session.user.id; // Henter brukerens ID fra sesjonen
+
+    const sql = "DELETE FROM Bruker WHERE ID_bruker = ?";
+    db.run(sql, [userId], function (err) {
+        if (err) {
+            console.error("Databasefeil:", err.message);
+            return res.status(500).json({ error: "En uventet feil har oppstått" });
+        }
+
+        if (this.changes === 0) {
+            return res.status(404).json({ error: "Bruker ikke funnet" });
+        }
+
+        // Avslutt sesjonen etter sletting
+        req.session.destroy();
+        res.clearCookie("connect.sid");
+        res.json({ message: "Bruker slettet" });
+    });
+});
+
+/** API-endepunkt: Lister alle brukere */
+app.get("/api/brukere", (req, res) => {
+  const sql = "SELECT ID_bruker, Navn, Epost FROM Bruker";
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      console.error("Databasefeil:", err.message);
+      return res.status(500).json({ error: "En uventet feil har oppstått" });
+    }
+    res.json(rows); // Returnerer brukerne som JSON
+  });
 });
 
 /** Rute: Logger ut brukeren og avslutter sesjonen */
 app.get("/logout", (req, res) => {
-    req.session.destroy();
-    res.clearCookie("connect.sid");
-    res.redirect("/login");
+  req.session.destroy();
+  res.clearCookie("connect.sid");
+  res.redirect("/login");
 });
 
 /**
@@ -86,27 +134,27 @@ app.get("/logout", (req, res) => {
  * Sjekker epost og passord mot databasen
  */
 app.post("/login", (req, res) => {
-    const { epost, passord } = req.body;
-    if (!epost || !passord) {
-        return res.redirect("/login?error=Mangler data fra skjema");
+  const { epost, passord } = req.body;
+  if (!epost || !passord) {
+    return res.redirect("/login?error=Mangler data fra skjema");
+  }
+  const sql = "SELECT * FROM Bruker WHERE Epost = ?";
+  db.get(sql, [epost], async (err, row) => {
+    if (err) {
+      console.error("Databasefeil:", err.message);
+      return res.redirect("/login?error=En uventet feil har oppstått");
     }
-    const sql = "SELECT * FROM Bruker WHERE Epost = ?";
-    db.get(sql, [epost], async (err, row) => {
-        if (err) {
-            console.error("Databasefeil:", err.message);
-            return res.redirect("/login?error=En uventet feil har oppstått");
-        }
-        if (row && (await bcrypt.compare(passord, row.Passord))) {
-            req.session.user = {
-                id: row.ID_bruker,
-                navn: row.Navn,
-                epost: row.Epost
-            };
-            res.redirect("/kursoversikt");
-        } else {
-            res.redirect("/login?error=Ugyldig epost eller passord");
-        }
-    });
+    if (row && (await bcrypt.compare(passord, row.Passord))) {
+      req.session.user = {
+        id: row.ID_bruker,
+        navn: row.Navn,
+        epost: row.Epost,
+      };
+      res.redirect("/kursoversikt");
+    } else {
+      res.redirect("/login?error=Ugyldig epost eller passord");
+    }
+  });
 });
 
 /**
@@ -114,42 +162,43 @@ app.post("/login", (req, res) => {
  * Lagrer brukeren i databasen med kryptert passord
  */
 app.post("/ny-bruker", async (req, res) => {
-    const { epost, navn, passord } = req.body;
-    if (!epost || !passord || !navn) {
-        return res.redirect("/login?error=Mangler data fra skjema");
+  const { epost, navn, passord } = req.body;
+  if (!epost || !passord || !navn) {
+    return res.redirect("/login?error=Mangler data fra skjema");
+  }
+  const sql = "INSERT INTO Bruker (Navn, Epost, Passord) VALUES (?, ?, ?)";
+  const hashedPassword = await bcrypt.hash(passord, 10);
+  db.run(sql, [navn, epost, hashedPassword], function (err) {
+    if (err) {
+      console.error("Databasefeil:", err.message);
+      return res.redirect("/login?error=En uventet feil har oppstått");
     }
-    const sql = "INSERT INTO Bruker (Navn, Epost, Passord) VALUES (?, ?, ?)";
-    const hashedPassword = await bcrypt.hash(passord, 10);
-    db.run(sql, [navn, epost, hashedPassword], function (err) {
-        if (err) {
-            console.error("Databasefeil:", err.message);
-            return res.redirect("/login?error=En uventet feil har oppstått");
-        }
-        req.session.user = { id: this.lastID, navn, epost };
-        res.redirect("/?melding=Bruker opprettet");
-    });
+    req.session.user = { id: this.lastID, navn, epost };
+    res.redirect("/?melding=Bruker opprettet");
+  });
 });
-
 
 app.post("/meldpaa", async (req, res) => {
-    const { kurs } = req.body;
-    if (!kurs) {
-        return res.redirect("/login?error=Mangler data fra skjema");
-    }
-    const sql = "INSERT INTO Bruker (Navn, Epost, Passord) VALUES (?, ?, ?)";
-    const hashedPassword = await bcrypt.hash(passord, 10);
-    db.run(sql, [navn, epost, hashedPassword], function (err) {
-        if (err) {
-            console.error("Databasefeil:", err.message);
-            return res.redirect("/login?error=En uventet feil har oppstått");
-        }
-        req.session.user = { id: this.lastID, navn, epost };
-        res.redirect("/?melding=Bruker opprettet");
-    });
-});
+  const { kurs } = req.body;
+  if (!kurs) {
+    return res.redirect("/login?error=Mangler data fra skjema");
+  }
+  if (req.session.user) {
+    const user = req.session.user;
+    console.log(user);
+    const sql = "UPDATE Bruker SET ID_kurs = ? WHERE ID_bruker = ?";
+    db.run(sql, [kurs, Number(user.id)], function (err) {
+      if (err) {
+        console.error("Databasefeil:", err.message);
+        return res.redirect("/kursoversikt?error=En uventet feil har oppstått");
+      }
 
+      res.redirect("/kursoversikt?melding=Bruker opprettet");
+    });
+  }
+});
 
 /** Starter serveren */
 server.listen(port, () => {
-    console.log(`Server kjører på http://localhost:${port}`);
+  console.log(`Server kjører på http://localhost:${port}`);
 });

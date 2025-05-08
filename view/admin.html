@@ -1,11 +1,82 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nb">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Brukerliste</title>
+    <link rel="stylesheet" href="/style/style.css">
 </head>
 <body>
-    
+    <header>
+        <h1>Brukerliste</h1>
+    </header>
+    <main>
+        <table id="bruker-tabell" border="1" cellpadding="10">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Navn</th>
+                    <th>Epost</th>
+                    <th>Handling</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Brukere vil bli lagt til her dynamisk -->
+            </tbody>
+        </table>
+    </main>
+    <footer>
+        <p>&copy; 2025 Nexatech</p>
+    </footer>
+    <script>
+        // Henter brukere fra API og viser dem i tabellen
+        fetch('/api/brukere')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.querySelector('#bruker-tabell tbody');
+                data.forEach(bruker => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${bruker.ID_bruker}</td>
+                        <td><input type="text" value="${bruker.Navn}" data-id="${bruker.ID_bruker}" data-field="Navn"></td>
+                        <td><input type="email" value="${bruker.Epost}" data-id="${bruker.ID_bruker}" data-field="Epost"></td>
+                        <td><button class="save-btn" data-id="${bruker.ID_bruker}">Lagre</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                // Legger til event listeners for lagre-knappene
+                document.querySelectorAll('.save-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const id = event.target.dataset.id;
+                        const row = event.target.closest('tr');
+                        const navn = row.querySelector('input[data-field="Navn"]').value;
+                        const epost = row.querySelector('input[data-field="Epost"]').value;
+
+                        // Sender oppdatering til serveren
+                        fetch(`/api/brukere/${id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ Navn: navn, Epost: epost })
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                alert('Bruker oppdatert!');
+                            } else {
+                                alert('Feil ved oppdatering av bruker.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Feil ved oppdatering:', error);
+                        });
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Feil ved henting av brukere:', error);
+            });
+    </script>
 </body>
 </html>
